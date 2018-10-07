@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.apache.commons.lang3.tuple.Pair;
 import org.noroomattheinn.tesla.Tesla;
 import org.noroomattheinn.tesla.Vehicle;
+import org.noroomattheinn.utils.Utils;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.HttpRequestMessage;
@@ -19,7 +20,7 @@ public class Helper {
     /**
      * @return a pair of either a vehicle,null on success or null,response on failure
      */
-    public Pair<Vehicle, HttpResponseMessage> loginAtTeslaAndFindVehicle(final HttpRequestMessage<Optional<String>> request, final ExecutionContext context) {
+    public Pair<Vehicle, HttpResponseMessage> loginFindAndWakeVehicle(final HttpRequestMessage<Optional<String>> request, final ExecutionContext context) {
         context.getLogger().info("StartHVAC processed a request.");
 
         // Fetch environment
@@ -40,6 +41,12 @@ public class Helper {
         Vehicle vehicle = tesla.getVehicleByVIN(vin);
         if (vehicle == null) {
         	return Pair.of(null, request.createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR).body("VIN not found").build());
+        }
+        
+        // If the car is not awake, wake it up
+        if (!vehicle.isAwake()) {
+        	vehicle.wakeUp();
+        	Utils.sleep(5000);            
         }
         
         // Done

@@ -27,14 +27,20 @@ public class EndHVAC {
         Helper helper = new Helper();
 
         // Get the vehicle
-        Pair<Vehicle, HttpResponseMessage> vehicleOrResponse = helper.loginAtTeslaAndFindVehicle(request, context);
+        Pair<Vehicle, HttpResponseMessage> vehicleOrResponse = helper.loginFindAndWakeVehicle(request, context);
         if (vehicleOrResponse.getRight() != null) {
         	return vehicleOrResponse.getRight();
         }
         Vehicle vehicle = vehicleOrResponse.getLeft();
         
+        // Get the current state
+        String shiftState = vehicle.queryDrive().shiftState;
+        if (!"P".equals(shiftState)) {
+            return request.createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR).body(vehicle.getVIN() + ": HVAC not stopped because car is not in park (" + shiftState + ").").build();
+        }
+        
         // Do it
-        vehicle.flashLights();
-        return request.createResponseBuilder(HttpStatus.OK).body("EndHVAC for " + vehicle.getVIN()).build();
+        vehicle.stopAC();
+        return request.createResponseBuilder(HttpStatus.OK).body(vehicle.getVIN() + ": HVAC stopped.").build();
     }
 }
